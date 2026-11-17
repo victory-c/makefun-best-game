@@ -14,6 +14,12 @@ mkdirSync(output, { recursive: true });
 for (const directory of ['game', 'screenshots']) {
   cpSync(join(repository, directory), join(output, directory), { recursive: true, dereference: false });
 }
-const dossier = buildDossier(output, { text_max_bytes: 163840 });
+const dossier = buildDossier(output, {
+  text_max_bytes: 163840,
+  game_max_files: 993,
+  game_max_bytes: 50331648,
+  game_path_max_bytes: 1000,
+  screenshots: { max: 4, max_bytes: 262144 },
+});
 writeFileSync(join(output, 'dossier.json'), dossier);
 console.log('Wickwarden: offline game, maker screenshots and deterministic dossier delivered.');

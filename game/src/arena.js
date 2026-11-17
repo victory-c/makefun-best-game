@@ -3,6 +3,7 @@
 import { VIEW_W, VIEW_H, PALETTE, HEARTH, DARKNESS_ALPHA } from './config.js';
 import { createRng } from './rng.js';
 import { TAU, clamp } from './mathutil.js';
+import { paintForgottenGarden } from './garden-art.js';
 
 // A made-up ward script: a stem with two random branches, carved into the floor ring.
 function drawWardGlyph(g, rng) {
@@ -28,6 +29,7 @@ function makeCanvas(w, h) {
 export function createArena() {
   const floor = makeCanvas(VIEW_W, VIEW_H);
   paintFloor(floor.getContext('2d'));
+  paintForgottenGarden(floor.getContext('2d'));
   const dark = makeCanvas(VIEW_W, VIEW_H);
   return { floor, dark, darkCtx: dark.getContext('2d') };
 }

@@ -17,12 +17,13 @@ try { best = Number(localStorage.getItem(BEST_SCORE_KEY)) || 0; } catch { /* Pri
 let recordedResult = false;
 let lastPhase = '';
 let accumulator = 0;
+const pendingActions = { dash: false, flare: false };
 let previous = performance.now();
 
 function startRun() {
   unlockAudio(); startMusic();
   game = new Wickwarden();game.start();paused = false;recordedResult = false;
-  accumulator = 0;canvas.focus();
+  accumulator = 0;pendingActions.dash = false;pendingActions.flare = false;canvas.focus();
 }
 
 function menuActions() {
@@ -54,9 +55,12 @@ function frame(now) {
   if (!paused) {
     accumulator += delta;
     const controls = readControls();
+    pendingActions.dash ||= controls.dash;
+    pendingActions.flare ||= controls.flare;
     let first = true;
     while (accumulator >= STEP) {
-      game.update(STEP, { ...controls, dash: first && controls.dash, flare: first && controls.flare });
+      game.update(STEP, { ...controls, dash: first && pendingActions.dash, flare: first && pendingActions.flare });
+      if (first) { pendingActions.dash = false;pendingActions.flare = false; }
       accumulator -= STEP;first = false;
     }
   }
