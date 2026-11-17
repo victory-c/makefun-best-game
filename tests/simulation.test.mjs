@@ -12,8 +12,8 @@ function snapshot(g) {
   return { phase: g.phase, wave: g.wave, time: g.elapsed, nightTime: g.nightTime, hp: g.player.hp, light: g.hearth.light, carry: g.carry, flare: g.player.flare, player: { x: g.player.x, y: g.player.y, dash: g.player.dashCooldown }, enemies: g.enemies.map((e) => ({ type: e.type, x: e.x, y: e.y, r: e.r, hp: e.hp, latched: e.latched, state: e.state })), drops: g.drops, shots: g.enemyShots, wax: g.wax, wardSeeds: g.wardSeeds, wards: g.wards, hazards: g.hazards, purchases: g.purchases, campBought: g.campBought };
 }
 
-export function runPlaytest(seed = 7102026, maxTime = 600) {
-  const game = new Wickwarden(seed);game.start();
+export function runPlaytest(seed = 7102026, maxTime = 600, options = {}) {
+  const game = new Wickwarden(seed, options);game.start();
   const nights = [];
   for (let i = 0; i < maxTime * 60 && !['won', 'lost'].includes(game.phase); i++) {
     if (game.phase === 'upgrade') {
