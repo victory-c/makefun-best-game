@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d0918">
+  <meta name="description" content="Wickwarden — a little candle against a very long night. An original offline action game.">
+  <title>Wickwarden • Keep the last light alive</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main id="stage">
+    <canvas id="game" width="1280" height="720" tabindex="0" aria-label="Wickwarden. Defend the hearth for ten nights. WASD or arrows move, mouse aims, hold click to shoot, Space dashes, E or right click flares. Escape pauses; M mutes. Enter starts or restarts."></canvas>
+    <span id="status" class="screen-reader" role="status" aria-live="polite">Loading the last light…</span>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
