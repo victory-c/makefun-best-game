@@ -61,7 +61,7 @@ export function updatePlayer(p, controls, game, dt) {
     p.vy += (my * p.stats.speed - p.vy) * accel;
   }
   p.x = clamp(p.x + p.vx * dt, 20, VIEW_W - 20);
-  p.y = clamp(p.y + p.vy * dt, 70, VIEW_H - 20);
+  p.y = clamp(p.y + p.vy * dt, 110, VIEW_H - 82);
 
   // Keep Wick from walking into the brazier.
   const h = game.hearth;
@@ -95,7 +95,7 @@ function fireBolts(p, game) {
   const count = s.bolts;
   for (let i = 0; i < count; i++) {
     const offset = (i - (count - 1) / 2) * PLAYER.spread;
-    const a = p.aim + offset + (fx.next() - 0.5) * 0.04;
+    const a = p.aim + offset + (game.rng.next() - 0.5) * 0.04;
     game.bolts.push({
       x: p.x + Math.cos(a) * 16,
       y: p.y + Math.sin(a) * 16,

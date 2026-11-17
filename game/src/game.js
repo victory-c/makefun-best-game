@@ -224,7 +224,7 @@ export class Wickwarden {
     }
     this.drops = this.drops.filter((d) => d.life > 0);
     if (collected) sfx.pickup(this.carry);
-    if (this.carry > 0 && dist(p.x, p.y, this.hearth.x, this.hearth.y) < 103) this.bankEmbers();
+    if (this.carry >= 3 && dist(p.x, p.y, this.hearth.x, this.hearth.y) < 103) this.bankEmbers();
   }
 
   bankEmbers() {
@@ -236,7 +236,8 @@ export class Wickwarden {
     this.hearth.light += restored;
     this.score += count * 20;
     this.player.flare = Math.min(100, this.player.flare + count * 2 * this.player.stats.flareRate);
-    floatText(this.effects, this.hearth.x, this.hearth.y - 75, `STOKED +${count}`, PALETTE.teal, 24);
+    this.effects.texts = this.effects.texts.filter((t) => !t.text.startsWith('STOKED'));
+    floatText(this.effects, this.hearth.x, this.hearth.y - 96, `STOKED +${count}`, PALETTE.teal, 20);
     burst(this.effects, this.hearth.x, this.hearth.y - 18, { count: 24, color: PALETTE.ember, speed: 160, life: 0.8 });
     ring(this.effects, this.hearth.x, this.hearth.y, 125, PALETTE.teal, 0.6, 3);
     this.bankPulse = 0.8;

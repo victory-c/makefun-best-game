@@ -45,7 +45,7 @@ export class GardenRenderer {
     this.drawAmbience(time);
     g.drawImage(this.garden, 0, 0);
     if (game.bankPulse > 0) {
-      g.globalAlpha = game.bankPulse * 0.3;
+      g.globalAlpha = game.bankPulse * 0.025;
       g.fillStyle = '#ffc36c';g.fillRect(0, 0, VIEW_W, VIEW_H);g.globalAlpha = 1;
     }
     drawTexts(g, game.effects);
