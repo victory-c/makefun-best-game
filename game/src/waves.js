@@ -18,6 +18,8 @@ export const NIGHTS = [
 
 export function beginNight(game) {
   game.wave += 1;
+  game.enterRealm();
+  game.campBought = null;
   game.nightTime = 0;
   game.director = { spawned: 0, timer: 1.5, bossQueued: false, clearTime: 0 };
   game.phase = 'play';
@@ -56,7 +58,7 @@ export function updateNight(game, dt) {
   }
   for (const rift of game.rifts) {
     rift.time -= dt;
-    if (rift.time <= 0) game.enemies.push(createEnemy(rift.type, rift.x, rift.y, game.wave));
+    if (rift.time <= 0) game.spawnEnemy(rift.type, rift.x, rift.y);
   }
   game.rifts = game.rifts.filter((r) => r.time > 0);
   const finishedSpawning = d.spawned >= plan.count && (!plan.boss || d.bossQueued);

@@ -29,9 +29,10 @@ setInterval(() => {
   if(action.fire&&!testFiring)canvas.dispatchEvent(new MouseEvent('mousedown',{button:0,...pos}));
   if(!action.fire&&testFiring)window.dispatchEvent(new MouseEvent('mouseup',{button:0}));
   window.testFiring=action.fire;
-  for(const key of [action.dash?' ':null,action.flare?'e':null])if(key){window.dispatchEvent(new KeyboardEvent('keydown',{key}));window.dispatchEvent(new KeyboardEvent('keyup',{key}));}
+  for(const key of [action.dash?' ':null,action.flare?'e':null,action.plant?'f':null])if(key){window.dispatchEvent(new KeyboardEvent('keydown',{key}));window.dispatchEvent(new KeyboardEvent('keyup',{key}));}
 },50);
 window.testChoose=chooseOffer;
+window.testCamp=chooseCamp;
 """
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
@@ -56,6 +57,8 @@ with sync_playwright() as p:
             page.screenshot(path=str(OUT/'result.jpg'),type='jpeg',quality=87)
             print('RESULT',json.dumps(s),flush=True);break
         if s['phase']=='upgrade':
+            purchase=page.evaluate('(s)=>testCamp(s)',s)
+            if purchase:page.keyboard.press(purchase);page.clock.run_for(80)
             page.screenshot(path=str(OUT/f'kindling-{s["wave"]}.jpg'),type='jpeg',quality=87)
             history.append({'wave':s['wave'],'hp':s['hp'],'light':round(s['light']),'time':round(s['time']),'score':s['score']})
             print('NIGHT',history[-1],flush=True)
@@ -68,7 +71,7 @@ with sync_playwright() as p:
                 captured.add(category)
                 name=f'play-{wave:02}-{tick:04}.jpg'
                 page.screenshot(path=str(OUT/name),type='jpeg',quality=87)
-                candidates.append({'file':name,'wave':wave,'enemies':enemies,'hp':s['hp'],'light':round(s['light']),'score':s['score']})
+                candidates.append({'file':name,'wave':wave,'enemies':enemies,'hp':s['hp'],'light':round(s['light']),'score':s['score'],'realm':s.get('realm'),'wards':len(s.get('wards',[]))})
         page.clock.run_for(2500)
         if tick%10==0:print('PROGRESS',tick,s['wave'],round(s['time']),flush=True)
     else:raise AssertionError('run did not end within ten virtual minutes')

@@ -7,21 +7,29 @@ import { drawDecals, drawSparks, drawTexts } from './particles.js';
 import { createRng } from './rng.js';
 import { TAU, dist } from './mathutil.js';
 import { label } from './interface.js';
+import { drawRealmHazards } from './realms.js';
+import { drawLightWards } from './light-wards.js';
 
 export class GardenRenderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.g = canvas.getContext('2d', { alpha: false });
     this.arena = createArena();
+    this.realmId = null;
     this.garden = this.makeGardenBorder();
   }
 
   drawWorld(game) {
     const g = this.g, time = game.time;
+    if (game.realm && game.realm.id !== this.realmId) {
+      this.arena = createArena(game.realm);this.realmId = game.realm.id;
+    }
     g.save();
     if (game.shakeAmount > 0.1) g.translate(Math.sin(time * 137) * game.shakeAmount, Math.cos(time * 159) * game.shakeAmount * 0.6);
     g.drawImage(this.arena.floor, 0, 0);
     drawDecals(g, game.effects);
+    drawRealmHazards(g, game);
+    drawLightWards(g, game);
     this.drawHomeCircle(game);
     this.drawRifts(game);
     const depthSorted = [...game.enemies.filter((e) => !e.dead).map((e) => ({ y: e.y, e })), { y: game.hearth.y, hearth: true }, { y: game.player.y, player: true }].sort((a, b) => a.y - b.y);
@@ -36,6 +44,7 @@ export class GardenRenderer {
       { x: game.player.x, y: game.player.y - 8, r: 125 + Math.min(70, game.carry * 4), power: 0.95, tint: '#ffac3115' },
     ];
     for (const r of game.rifts) lights.push({ x: r.x, y: r.y, r: r.type === 'boss' ? 170 : 80, power: 0.6, tint: '#7b2dbd18' });
+    for (const ward of game.wards || []) lights.push({ x: ward.x, y: ward.y, r: 185, power: 0.9, tint: '#52e6bf15' });
     for (const b of game.bolts.filter((_, i) => i % 3 === 0).slice(0, 16)) lights.push({ x: b.x, y: b.y, r: 42, power: 0.6 });
     drawDarkness(g, this.arena, lights, game.flareTime * 0.65);
     this.drawEmbers(game);

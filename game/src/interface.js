@@ -6,6 +6,10 @@ import { KINDLINGS, RARITY_COLORS, drawKindlingIcon } from './upgrades.js';
 import { NIGHTS } from './waves.js';
 import { isMuted } from './audio.js';
 import { clamp, TAU } from './mathutil.js';
+import { DISCIPLINES, DIFFICULTIES } from './loadouts.js';
+import { CAMP_STOCK, campPrice } from './camp.js';
+import { REALMS } from './realms.js';
+import { drawCampaignRoute, drawTacticalMap, drawRealmSeal } from './world-map.js';
 
 const INK = '#fbefd5';
 const DIM = '#b8a9c8';
@@ -13,7 +17,10 @@ const FONT = '"Trebuchet MS", "Segoe UI", sans-serif';
 const SERIF = 'Georgia, "Times New Roman", serif';
 export const START_BUTTON = { x: 92, y: 509, w: 330, h: 64 };
 export const RESTART_BUTTON = { x: 466, y: 534, w: 348, h: 60 };
-export const OFFER_RECTS = [0, 1, 2].map((i) => ({ x: 167 + i * 326, y: 247, w: 294, h: 286 }));
+export const OFFER_RECTS = [0, 1, 2].map((i) => ({ x: 44 + i * 267, y: 230, w: 244, h: 287 }));
+export const CANDLE_RECTS = [0, 1, 2].map((i) => ({ x: 709 + i * 148, y: 560, w: 137, h: 47 }));
+export const DIFFICULTY_RECTS = [0, 1, 2].map((i) => ({ x: 709 + i * 148, y: 640, w: 137, h: 34 }));
+export const CAMP_RECTS = [0, 1, 2].map((i) => ({ x: 880, y: 280 + i * 75, w: 337, h: 65 }));
 export const hitRect = (mouse, r) => mouse.x >= r.x && mouse.x <= r.x + r.w && mouse.y >= r.y && mouse.y <= r.y + r.h;
 
 export function label(g, text, x, y, size = 18, color = INK, align = 'left', weight = 500, family = FONT) {
@@ -58,7 +65,7 @@ function button(g, rect, text, hot, hint = '') {
   if (hint) label(g, hint, x + w / 2, y + h + 24, 14, DIM, 'center');
 }
 
-export function drawTitle(g, game, mouse, best) {
+export function drawTitle(g, game, mouse, best, settings = { discipline: 'wick', difficulty: 'warden', journal: { seals: [] } }) {
   const fade = g.createLinearGradient(0, 0, 1280, 0);
   fade.addColorStop(0, '#110b1bf5'); fade.addColorStop(0.5, '#110b1bee'); fade.addColorStop(1, '#110b1b33');
   g.fillStyle = fade; g.fillRect(0, 0, 1280, 720);
@@ -67,7 +74,7 @@ export function drawTitle(g, game, mouse, best) {
   label(g, 'WARDEN', 88, 257, 101, INK, 'left', 700, SERIF);
   line(g, 94, 325, 478, '#b98448');
   label(g, 'Keep the last light alive.', 95, 366, 27, PALETTE.flame, 'left', 600, SERIF);
-  wrap(g, 'Fight the gloam. Gather its embers. Carry them home to feed the hearth. Survive ten nights and see the dawn.', 95, 411, 460, 19, '#cdbbd3', 28);
+  wrap(g, 'Cross four realms. Carry embers home, weave lantern defenses and shape your candle. Defeat Mother Umbra. See the dawn.', 95, 411, 460, 19, '#cdbbd3', 28);
   button(g, START_BUTTON, 'LIGHT THE WICK   →', hitRect(mouse, START_BUTTON), 'ENTER to begin  ·  A complete run takes about 5 minutes');
   label(g, 'MOVE', 97, 633, 12, PALETTE.teal, 'left', 800);
   label(g, 'WASD / arrows', 97, 657, 17);
@@ -75,14 +82,27 @@ export function drawTitle(g, game, mouse, best) {
   label(g, 'Mouse + hold click', 278, 657, 17);
   label(g, 'DASH / FLARE', 488, 633, 12, PALETTE.teal, 'left', 800);
   label(g, 'Space / E', 488, 657, 17);
-  drawTitleHero(g, game.time);
-  label(g, 'TEN NIGHTS  /  THIRTEEN KINDLINGS  /  ONE LAST HEARTH', 925, 605, 12, '#d5ba9b', 'center', 700);
-  if (best) label(g, `YOUR BEST  ${best.toLocaleString('en-US')}`, 925, 639, 17, PALETTE.flame, 'center', 700);
+  drawTitleHero(g, game.time, settings.discipline);
+  label(g, `GARDEN JOURNAL  ${settings.journal.seals.length} / 4 SEALS    ·    BEST ${best.toLocaleString('en-US')}`, 925, 65, 12, '#d6bb9a', 'center', 700);
+  label(g, 'CHOOSE YOUR CANDLE', 925, 539, 11, PALETTE.teal, 'center', 800);
+  DISCIPLINES.forEach((d, i) => {
+    const r = CANDLE_RECTS[i], chosen = settings.discipline === d.id;
+    panel(g, r.x, r.y, r.w, r.h, chosen ? d.color : '#5c4867', chosen ? '#3c2d38' : '#191225', 5);
+    label(g, d.name, r.x + r.w / 2, r.y + 16, 17, chosen ? d.color : INK, 'center', 700, SERIF);
+    label(g, d.subtitle, r.x + r.w / 2, r.y + 34, 8, DIM, 'center', 800);
+  });
+  const chosenNight = DIFFICULTIES.find((d) => d.id === settings.difficulty) || DIFFICULTIES[1];
+  label(g, `${chosenNight.text.toUpperCase()} · SCORE ×${chosenNight.score}`, 925, 625, 10, PALETTE.teal, 'center', 800);
+  DIFFICULTIES.forEach((d, i) => {
+    const r = DIFFICULTY_RECTS[i], chosen = settings.difficulty === d.id;
+    panel(g, r.x, r.y, r.w, r.h, chosen ? PALETTE.flame : '#5c4867', chosen ? '#453429' : '#191225', 5);
+    label(g, d.name, r.x + r.w / 2, r.y + 17, 14, chosen ? PALETTE.flame : DIM, 'center', 700);
+  });
   label(g, `M  ${isMuted() ? 'SOUND OFF' : 'SOUND ON'}     ·     P / ESC  PAUSE`, 1234, 690, 12, '#a395b5', 'right');
 }
 
-function drawTitleHero(g, time) {
-  const cx = 925, cy = 365;
+function drawTitleHero(g, time, discipline) {
+  const cx = 925, cy = 325;
   g.save();
   const halo = g.createRadialGradient(cx, cy - 45, 15, cx, cy - 45, 260);
   halo.addColorStop(0, '#ff9a3b40'); halo.addColorStop(0.6, '#e46d4420'); halo.addColorStop(1, '#a2528500');
@@ -101,7 +121,7 @@ function drawTitleHero(g, time) {
   }
   // A larger rendering of the same candle character that the player controls.
   g.translate(cx, cy + 5); g.scale(5.1, 5.1); g.translate(-cx, -cy);
-  drawPlayer(g, { x: cx, y: cy, vx: 0, aim: -0.55, alive: true, invuln: 0, recoil: 0, trail: [], stats: { orbiters: 0 } }, time);
+  drawPlayer(g, { x: cx, y: cy, vx: 0, aim: -0.55, alive: true, invuln: 0, recoil: 0, trail: [], discipline, stats: { orbiters: 0 } }, time);
   g.restore();
   for (let i = 0; i < 23; i++) {
     const phase = (time * (0.1 + (i % 4) * 0.025) + i * 0.137) % 1;
@@ -112,8 +132,9 @@ function drawTitleHero(g, time) {
     g.beginPath(); g.arc(x, y, 1.5 + i % 3, 0, TAU); g.fill();
   }
   g.globalAlpha = 1;
-  label(g, 'WICK', cx, 526, 15, PALETTE.flame, 'center', 800);
-  label(g, 'Small flame. Stubborn heart.', cx, 552, 18, '#cdbbd3', 'center', 500, SERIF);
+  const chosen = DISCIPLINES.find((d) => d.id === discipline) || DISCIPLINES[0];
+  label(g, chosen.name.toUpperCase(), cx, 486, 15, chosen.color, 'center', 800);
+  label(g, chosen.text, cx, 512, 16, '#cdbbd3', 'center', 500, SERIF);
 }
 
 function meter(g, x, y, w, h, value, color, background = '#332437') {
@@ -139,16 +160,18 @@ export function drawHUD(g, game, paused) {
     flameTongue(g, x, 61, 5.7, 20, 1);
     g.fillStyle = i < p.hp ? PALETTE.flame : '#503947';g.fill();
   }
-  label(g, 'WICK', 253, 25, 12, DIM, 'left', 800);
+  label(g, game.discipline.name.toUpperCase(), 253, 25, 12, DIM, 'left', 800);
   label(g, game.score.toLocaleString('en-US'), 1248, 39, 32, INK, 'right', 800);
   label(g, `BEST CHAIN ${game.maxCombo}     ·     ${game.kills} BANISHED`, 1248, 73, 12, DIM, 'right', 700);
   const remaining = game.enemies.filter((e) => !e.dead).length + game.rifts.length;
   label(g, remaining ? `${remaining} IN THE GLOAM` : 'LISTEN TO THE DARK…', 32, 96, 11, '#ae97c5', 'left', 700);
+  label(g, `${game.realm.short}  ·  ${game.difficulty.name.toUpperCase()}  ·  ${game.realm.rule}`, 254, 96, 10, game.realm.color, 'left', 700);
   if (game.combo >= 5 && game.comboTime > 0) {
     label(g, `${game.combo} CHAIN`, 1225, 127, 28, PALETTE.teal, 'right', 800);
     meter(g, 1093, 148, 130, 4, game.comboTime / 1.6, PALETTE.teal);
   }
   drawBottomBar(g, game);
+  drawTacticalMap(g, game);
   const boss = game.enemies.find((e) => e.type === 'boss' && !e.dead);
   if (boss) {
     panel(g, 423, 105, 434, 49, '#9a4776aa', '#1a0d28cc', 8);
@@ -166,7 +189,7 @@ export function drawHUD(g, game, paused) {
   }
   if (game.helpTime > 0) {
     panel(g, 376, 574, 528, 49, '#a57b49aa', '#1a1029de', 8);
-    label(g, 'Defend the hearth. Collect gold embers. Bring them home.', 640, 599, 16, INK, 'center');
+    label(g, 'Carry embers home. F plants lanterns; their light lines burn.', 640, 599, 16, INK, 'center');
   }
   if (paused) drawPause(g);
 }
@@ -179,8 +202,8 @@ function drawBottomBar(g, game) {
   const dashReady = p.dashCooldown <= 0;
   label(g, dashReady ? 'DASH READY' : 'REKINDLING', 32, 699, 15, dashReady ? INK : DIM, 'left', 700);
   meter(g, 167, 683, 92, 7, 1 - p.dashCooldown / p.stats.dashCooldown, PALETTE.teal);
-  label(g, `EMBERS  ${game.carry}`, 306, 676, 18, PALETTE.ember, 'left', 800);
-  label(g, game.carry ? 'Carry them to the hearth →' : `${game.banked} carried home`, 306, 700, 13, DIM);
+  label(g, `EMBERS ${game.carry}  ·  WAX ${game.wax}`, 306, 676, 17, PALETTE.ember, 'left', 800);
+  label(g, `F  WEAVE LIGHT [${game.wardSeeds}]  ·  ${game.banked} embers home`, 306, 700, 12, DIM);
   const ready = p.flare >= 100;
   label(g, 'E / RIGHT CLICK', 677, 675, 12, ready ? PALETTE.flame : DIM, 'left', 800);
   label(g, ready ? 'SUNFLARE READY' : `SUNFLARE  ${Math.floor(p.flare)}%`, 677, 699, 15, ready ? PALETTE.flame : INK, 'left', 800);
@@ -190,26 +213,37 @@ function drawBottomBar(g, game) {
 }
 
 export function drawKindlingDraft(g, game, mouse) {
-  g.fillStyle = '#0e0919df';g.fillRect(0, 0, 1280, 720);
-  label(g, `NIGHT ${game.wave} SURVIVED`, 640, 104, 15, PALETTE.teal, 'center', 800);
-  label(g, 'Feed your little fire.', 640, 157, 51, INK, 'center', 500, SERIF);
-  label(g, 'Choose one kindling. The next night grows hungrier.', 640, 204, 18, DIM, 'center');
+  g.fillStyle = '#0e0919e8';g.fillRect(0, 0, 1280, 720);
+  label(g, `NIGHT ${game.wave} SURVIVED · ${game.realm.name.toUpperCase()}`, 640, 79, 13, PALETTE.teal, 'center', 800);
+  label(g, 'Tend the fire. Shape the journey.', 640, 128, 43, INK, 'center', 500, SERIF);
+  label(g, 'Spend wax at camp if you wish. Choose one kindling to face the next night.', 640, 179, 17, DIM, 'center');
   game.offers.forEach((offer, index) => {
-    const r = OFFER_RECTS[index];
-    const color = RARITY_COLORS[offer.rarity];
-    const hot = hitRect(mouse, r);
-    panel(g, r.x, r.y - (hot ? 7 : 0), r.w, r.h, hot ? color : '#63506f', hot ? '#302036fa' : '#1d152bf5', 10);
-    const y = r.y - (hot ? 7 : 0);
-    label(g, `${index + 1}`, r.x + 22, y + 24, 15, color, 'left', 800);
-    label(g, offer.rarity.toUpperCase(), r.x + r.w - 22, y + 24, 11, color, 'right', 800);
-    drawKindlingIcon(g, offer.id, r.x + r.w / 2, y + 91, 66, game.time);
-    label(g, offer.name, r.x + r.w / 2, y + 155, 24, INK, 'center', 700, SERIF);
-    wrap(g, offer.text, r.x + 27, y + 195, r.w - 54, 17, '#c9b9d2', 24);
-    label(g, hot ? 'TAKE THIS KINDLING  →' : 'CLICK OR PRESS ' + (index + 1), r.x + r.w / 2, y + 262, 12, color, 'center', 800);
+    const r = OFFER_RECTS[index], color = RARITY_COLORS[offer.rarity], hot = hitRect(mouse, r);
+    const y = r.y - (hot ? 5 : 0);
+    panel(g, r.x, y, r.w, r.h, hot ? color : '#63506f', hot ? '#302036fa' : '#1d152bf5', 9);
+    label(g, String(index + 1), r.x + 18, y + 24, 15, color, 'left', 800);
+    label(g, offer.rarity.toUpperCase(), r.x + r.w - 18, y + 24, 10, color, 'right', 800);
+    drawKindlingIcon(g, offer.id, r.x + r.w / 2, y + 90, 60, game.time);
+    label(g, offer.name, r.x + r.w / 2, y + 150, 21, INK, 'center', 700, SERIF);
+    wrap(g, offer.text, r.x + 20, y + 187, r.w - 40, 15, '#c9b9d2', 22);
+    label(g, hot ? 'TAKE KINDLING →' : 'CLICK OR PRESS ' + (index + 1), r.x + r.w / 2, y + 267, 11, color, 'center', 800);
   });
-  label(g, '+1 LIFE MENDED    ·    +18 HEARTH LIGHT    ·    YOUR BUILD STAYS WITH YOU', 640, 572, 12, PALETTE.teal, 'center', 700);
-  drawBuild(g, game, 627);
+  panel(g, 861, 230, 374, 287, '#866844', '#241b24f5', 9);
+  label(g, 'THE WAYFARER’S CAMP', 881, 252, 15, PALETTE.flame, 'left', 700, SERIF);
+  label(g, `${game.wax} WAX`, 1215, 252, 15, PALETTE.teal, 'right', 800);
+  CAMP_STOCK.forEach((item, index) => {
+    const r = CAMP_RECTS[index], price = campPrice(game, item), bought = game.campBought === item.id;
+    const available = !game.campBought && game.wax >= price;
+    panel(g, r.x, r.y, r.w, r.h, available && hitRect(mouse, r) ? PALETTE.flame : '#6d5260', available ? '#3a2930' : '#221b28', 5);
+    label(g, `${item.key.toUpperCase()}  ${item.name}`, r.x + 12, r.y + 18, 14, available ? INK : DIM, 'left', 800);
+    label(g, bought ? 'BOUGHT' : `${price} WAX`, r.x + r.w - 12, r.y + 18, 11, bought ? PALETTE.teal : PALETTE.ember, 'right', 800);
+    wrap(g, item.text, r.x + 12, r.y + 39, r.w - 24, 12, '#baa9c0', 16);
+  });
+  label(g, 'ONE CAMP PURCHASE PER NIGHT · KINDLING IS FREE', 1048, 533, 9, '#baaa9a', 'center', 700);
+  drawCampaignRoute(g, game, 584);
+  drawBuild(g, game, 677);
 }
+
 
 function drawBuild(g, game, y) {
   const items = Object.entries(game.taken);
@@ -241,7 +275,7 @@ export function drawResults(g, game, mouse, best) {
   flameTongue(g, 640, 127, 17, 52, Math.sin(game.time * 4) * 5);
   g.fillStyle = won ? PALETTE.flame : '#8e74a6';g.fill();
   label(g, won ? 'DAWN IS YOURS.' : 'EVEN LITTLE FIRES FALL.', 640, 190, won ? 63 : 52, won ? PALETTE.flame : INK, 'center', 500, SERIF);
-  label(g, game.endReason, 640, 247, 21, '#cdbbd3', 'center');
+  label(g, `${game.discipline.name} · ${game.difficulty.name} — ${game.endReason}`, 640, 247, 19, '#cdbbd3', 'center');
   label(g, game.score.toLocaleString('en-US'), 640, 320, 66, INK, 'center', 800);
   label(g, game.score >= best && game.score > 0 ? 'PERSONAL BEST  ·  FINAL SCORE' : `FINAL SCORE  ·  BEST ${best.toLocaleString('en-US')}`, 640, 370, 12, PALETTE.teal, 'center', 800);
   const stats = [[won ? '10 / 10' : `${Math.max(0, game.wave - 1)} / 10`, 'NIGHTS KEPT'], [String(game.kills), 'GLOAM BANISHED'], [String(game.banked), 'EMBERS HOME'], [String(game.maxCombo), 'BEST CHAIN']];
@@ -251,7 +285,9 @@ export function drawResults(g, game, mouse, best) {
     label(g, title, x, 471, 11, DIM, 'center', 800);
   });
   button(g, RESTART_BUTTON, won ? 'LIGHT ANOTHER WICK   ↻' : 'TRY ANOTHER WICK   ↻', hitRect(mouse, RESTART_BUTTON), 'ENTER / R to restart  ·  ESC to return to the title');
-  drawBuild(g, game, 647);
+  label(g, 'REALMS KEPT', 470, 660, 11, DIM, 'right', 800);
+  REALMS.forEach((realm, i) => drawRealmSeal(g, realm, 522 + i * 67, 660, game.realmSeals.includes(realm.id), 15));
+  label(g, `${game.realmSeals.length} / 4`, 802, 660, 15, PALETTE.teal, 'left', 800);
   if (!won) label(g, 'Tip: gold embers restore hearth light when you carry them inside its circle.', 640, 690, 14, '#bba4c1', 'center');
 }
 

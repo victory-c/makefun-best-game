@@ -57,8 +57,9 @@ export function updatePlayer(p, controls, game, dt) {
     burst(game.effects, p.x, p.y, { count: 2, color: PALETTE.teal, speed: 40, size: 4, life: 0.35 });
   } else {
     const accel = clamp(dt * 14, 0, 1);
-    p.vx += (mx * p.stats.speed - p.vx) * accel;
-    p.vy += (my * p.stats.speed - p.vy) * accel;
+    const terrain = game.terrainFactor(p.x, p.y);
+    p.vx += (mx * p.stats.speed * terrain - p.vx) * accel;
+    p.vy += (my * p.stats.speed * terrain - p.vy) * accel;
   }
   p.x = clamp(p.x + p.vx * dt, 20, VIEW_W - 20);
   p.y = clamp(p.y + p.vy * dt, 110, VIEW_H - 82);
@@ -174,7 +175,7 @@ export function drawPlayer(g, p, time) {
     g.fill();
     g.globalCompositeOperation = 'source-over';
     // Candle body: the warden's little wax cloak.
-    g.fillStyle = '#efe0c4';
+    g.fillStyle = p.discipline === 'nettle' ? '#d7e9c5' : p.discipline === 'glint' ? '#e4d7f4' : '#efe0c4';
     g.beginPath();
     g.moveTo(-9, 2 + bob);
     g.lineTo(9, 2 + bob);

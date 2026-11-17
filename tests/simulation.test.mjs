@@ -5,11 +5,11 @@ import { createEnemy, updateEnemy } from '../game/src/enemies.js';
 import { damagePlayer } from '../game/src/player.js';
 import { KINDLINGS, rollOffers } from '../game/src/upgrades.js';
 import { createRng } from '../game/src/rng.js';
-import { playPolicy, chooseOffer } from './play-policy.mjs';
+import { playPolicy, chooseOffer, chooseCamp } from './play-policy.mjs';
 const idle = { moveX: 0, moveY: 0, aimX: 640, aimY: 200, fire: false, dash: false, flare: false };
 
 function snapshot(g) {
-  return { phase: g.phase, wave: g.wave, time: g.elapsed, hp: g.player.hp, light: g.hearth.light, carry: g.carry, flare: g.player.flare, player: { x: g.player.x, y: g.player.y, dash: g.player.dashCooldown }, enemies: g.enemies.map((e) => ({ type: e.type, x: e.x, y: e.y, r: e.r, hp: e.hp, latched: e.latched, state: e.state })), drops: g.drops, shots: g.enemyShots };
+  return { phase: g.phase, wave: g.wave, time: g.elapsed, nightTime: g.nightTime, hp: g.player.hp, light: g.hearth.light, carry: g.carry, flare: g.player.flare, player: { x: g.player.x, y: g.player.y, dash: g.player.dashCooldown }, enemies: g.enemies.map((e) => ({ type: e.type, x: e.x, y: e.y, r: e.r, hp: e.hp, latched: e.latched, state: e.state })), drops: g.drops, shots: g.enemyShots, wax: g.wax, wardSeeds: g.wardSeeds, wards: g.wards, hazards: g.hazards, purchases: g.purchases, campBought: g.campBought };
 }
 
 export function runPlaytest(seed = 7102026, maxTime = 600) {
@@ -18,6 +18,8 @@ export function runPlaytest(seed = 7102026, maxTime = 600) {
   for (let i = 0; i < maxTime * 60 && !['won', 'lost'].includes(game.phase); i++) {
     if (game.phase === 'upgrade') {
       nights.push({ wave: game.wave, time: Math.round(game.elapsed), hp: game.player.hp, light: Math.round(game.hearth.light), kills: game.kills });
+      const purchase = chooseCamp(snapshot(game));
+      if (purchase) game.purchase({ z: 'lantern', x: 'mending', c: 'seeds' }[purchase]);
       game.chooseKindling(chooseOffer(game.offers.map((o) => o.id), game.player.hp, game.hearth.light));
     }
     game.update(1 / 60, playPolicy(snapshot(game)));
@@ -25,7 +27,7 @@ export function runPlaytest(seed = 7102026, maxTime = 600) {
     assert.ok(game.hearth.light >= 0 && game.hearth.light <= game.hearth.maxLight);
     assert.ok(game.enemies.length <= 110);
   }
-  return { phase: game.phase, wave: game.wave, score: game.score, kills: game.kills, banked: game.banked, hp: game.player.hp, light: Math.round(game.hearth.light), time: Math.round(game.elapsed), taken: game.taken, nights };
+  return { phase: game.phase, wave: game.wave, score: game.score, kills: game.kills, banked: game.banked, hp: game.player.hp, light: Math.round(game.hearth.light), time: Math.round(game.elapsed), taken: game.taken, seals: game.realmSeals, purchases: game.purchases, nights };
 }
 
 test('swept collision catches fast bolts and degenerate segments', () => {

@@ -53,7 +53,7 @@ export function updateEnemy(e, game, dt) {
   const tx = def.target === 'player' && player.alive ? player.x : hearth.x;
   const ty = def.target === 'player' && player.alive ? player.y : hearth.y;
   let [dx, dy] = normalize(tx - e.x, ty - e.y);
-  let speed = e.speed * game.gloamSlow;
+  let speed = e.speed * game.gloamSlow * game.terrainFactor(e.x, e.y);
 
   switch (e.type) {
     case 'moth': {

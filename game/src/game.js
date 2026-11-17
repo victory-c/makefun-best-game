@@ -9,9 +9,13 @@ import { createEffects, updateEffects, burst, ring, floatText, scorch } from './
 import { rollOffers } from './upgrades.js';
 import { beginNight, updateNight } from './waves.js';
 import { sfx, setMusicIntensity } from './audio.js';
+import { DIFFICULTIES, configureCandle } from './loadouts.js';
+import { enterRealm, updateRealm, movementThroughTerrain } from './realms.js';
+import { plantLightWard, updateLightWards } from './light-wards.js';
+import { purchaseSupply } from './camp.js';
 
 export class Wickwarden {
-  constructor(seed = 7102026) {
+  constructor(seed = 7102026, options = {}) {
     this.rng = createRng(seed);
     this.seed = seed;
     this.phase = 'title';
@@ -37,6 +41,16 @@ export class Wickwarden {
     this.effects = createEffects();
     this.hearth = { ...HEARTH, light: HEARTH.maxLight, radiusBoost: 1, beacon: 0, hurtFlash: 0, shotTimer: 0 };
     this.player = createPlayer(HEARTH.x, HEARTH.y + 125);
+    this.discipline = configureCandle(this.player, options.discipline);
+    this.difficulty = DIFFICULTIES.find((d) => d.id === options.difficulty) || DIFFICULTIES[1];
+    this.realm = null;
+    this.realmSeals = [];
+    this.hazards = [];
+    this.wards = [];
+    this.wardSeeds = 2;
+    this.wax = 8;
+    this.purchases = {};
+    this.campBought = null;
     this.gloamSlow = 1;
     this.flareTime = 0;
     this.shakeAmount = 0;
@@ -53,8 +67,16 @@ export class Wickwarden {
   shake(power) { this.shakeAmount = Math.max(this.shakeAmount, power); }
   hitStop(seconds) { this.stopTime = Math.max(this.stopTime, seconds); }
   spawnEnemy(type, x, y) {
-    if (this.enemies.length < 110) this.enemies.push(createEnemy(type, x, y, this.wave));
+    if (this.enemies.length >= 110) return;
+    const enemy = createEnemy(type, x, y, this.wave);
+    enemy.hp = Math.round(enemy.hp * this.difficulty.health);
+    enemy.maxHp = enemy.hp;
+    enemy.speed *= this.difficulty.speed;
+    this.enemies.push(enemy);
   }
+  terrainFactor(x, y) { return movementThroughTerrain(this, x, y); }
+  enterRealm() { enterRealm(this); }
+  purchase(id) { const bought = purchaseSupply(this, id);if (bought) sfx.choose();return bought; }
 
   update(dt, controls) {
     this.time += dt;
@@ -74,9 +96,15 @@ export class Wickwarden {
     this.gloamSlow = this.flareTime > 0 ? 0.4 : 1;
     this.comboTime = Math.max(0, this.comboTime - dt);
     if (!this.comboTime) this.combo = 0;
-    this.hearth.light = Math.max(0, this.hearth.light - dt * (0.48 + this.wave * 0.025));
+    this.hearth.light = Math.max(0, this.hearth.light - dt * (0.48 + this.wave * 0.025) * this.difficulty.drain);
+    if (controls.plant && !plantLightWard(this)) {
+      const reason = !this.wardSeeds ? 'No seeds — visit camp' : dist(this.player.x, this.player.y, 640, 384) < 142 ? 'Plant beyond the hearth ring' : 'Spread your lanterns farther';
+      floatText(this.effects, this.player.x, this.player.y - 35, reason, PALETTE.uiDim, 13);
+    }
+    updateRealm(this, dt);
     updatePlayer(this.player, controls, this, dt);
     for (const enemy of [...this.enemies]) if (!enemy.dead) updateEnemy(enemy, this, dt);
+    updateLightWards(this, dt);
     this.updateBolts(dt);
     this.updateEnemyShots(dt);
     this.updateContact(dt);
@@ -90,7 +118,7 @@ export class Wickwarden {
   }
 
   damageHearth(amount, x, y) {
-    this.hearth.light = Math.max(0, this.hearth.light - amount);
+    this.hearth.light = Math.max(0, this.hearth.light - amount * this.difficulty.drain);
     this.hearth.hurtFlash = 0.5;
     this.shake(5);
     ring(this.effects, x, y, 30, PALETTE.gloamEye, 0.3);
@@ -98,7 +126,7 @@ export class Wickwarden {
   }
 
   drainHearth(amount, enemy) {
-    this.hearth.light = Math.max(0, this.hearth.light - amount);
+    this.hearth.light = Math.max(0, this.hearth.light - amount * this.difficulty.drain);
     this.hearth.hurtFlash = 0.25;
     if (this.frame % 35 === 0) burst(this.effects, enemy.x, enemy.y, { count: 4, color: PALETTE.gloamEye, speed: 45, size: 2 });
   }
@@ -231,6 +259,7 @@ export class Wickwarden {
     if (!this.carry) return;
     const count = this.carry;
     this.banked += count;
+    this.wax += count;
     this.carry = 0;
     const restored = Math.min(this.hearth.maxLight - this.hearth.light, count * 1.8);
     this.hearth.light += restored;
@@ -270,6 +299,7 @@ export class Wickwarden {
   }
 
   clearNight() {
+    if (this.wave === this.realm.last && !this.realmSeals.includes(this.realm.id)) this.realmSeals.push(this.realm.id);
     this.bankEmbers();
     this.hearth.light = Math.min(this.hearth.maxLight, this.hearth.light + HEARTH.regenBetweenWaves);
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + 1);
@@ -306,6 +336,7 @@ export class Wickwarden {
       burst(this.effects, this.hearth.x, this.hearth.y, { count: 160, color: PALETTE.flame, speed: 500, size: 5, life: 2 });
       sfx.win();
     } else sfx.lose();
+    this.score = Math.round(this.score * this.difficulty.score);
   }
 }
 

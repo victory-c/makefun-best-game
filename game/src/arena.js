@@ -4,6 +4,7 @@ import { VIEW_W, VIEW_H, PALETTE, HEARTH, DARKNESS_ALPHA } from './config.js';
 import { createRng } from './rng.js';
 import { TAU, clamp } from './mathutil.js';
 import { paintForgottenGarden } from './garden-art.js';
+import { paintRealmLandmarks } from './realm-art.js';
 
 // A made-up ward script: a stem with two random branches, carved into the floor ring.
 function drawWardGlyph(g, rng) {
@@ -26,17 +27,18 @@ function makeCanvas(w, h) {
   return c;
 }
 
-export function createArena() {
+export function createArena(realm = null) {
   const floor = makeCanvas(VIEW_W, VIEW_H);
-  paintFloor(floor.getContext('2d'));
+  paintFloor(floor.getContext('2d'), realm);
   paintForgottenGarden(floor.getContext('2d'));
+  paintRealmLandmarks(floor.getContext('2d'), realm);
   const dark = makeCanvas(VIEW_W, VIEW_H);
   return { floor, dark, darkCtx: dark.getContext('2d') };
 }
 
-function paintFloor(g) {
+function paintFloor(g, realm) {
   const rng = createRng(77);
-  g.fillStyle = PALETTE.mortar;
+  g.fillStyle = realm?.mortar || PALETTE.mortar;
   g.fillRect(0, 0, VIEW_W, VIEW_H);
   // Irregular flagstones laid in staggered rows.
   const rowH = 54;
@@ -45,7 +47,7 @@ function paintFloor(g) {
     while (x < VIEW_W) {
       const w = rng.range(70, 130);
       const shade = rng.range(0, 1);
-      const base = shade < 0.5 ? PALETTE.stone : PALETTE.stoneLight;
+      const base = shade < 0.5 ? (realm?.stone[0] || PALETTE.stone) : (realm?.stone[1] || PALETTE.stoneLight);
       g.fillStyle = base;
       roundRect(g, x + 3, y + 3, w - 6, rowH - 6, 7);
       g.fill();
