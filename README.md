@@ -11,7 +11,7 @@ Wickwarden is an original offline browser action game: a little candle defends t
 ```sh
 node serve.ts
 # Open http://127.0.0.1:8080 in desktop Chrome.
-# Optional: node --test tests/simulation.test.mjs
+# Optional: node --test tests/*.test.mjs
 ```
 
 ## Keep the last light alive
